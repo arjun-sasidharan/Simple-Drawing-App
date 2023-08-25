@@ -6,16 +6,34 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <com.example.simpledrawingapp.DrawingView
-        android:id="@+id/drawingView"
+    <FrameLayout
+        android:id="@+id/flDrawingViewContainer"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="5dp"
         android:background="@drawable/background_drawing_view_layout"
+        android:padding="1dp"
         app:layout_constraintBottom_toTopOf="@id/linearLayoutPaintColors"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/ivBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/image" />
+
+
+        <com.example.simpledrawingapp.DrawingView
+            android:id="@+id/drawingView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#60FFFFFF" />
+
+    </FrameLayout>
+
 
     <LinearLayout
         android:id="@+id/linearLayoutPaintColors"
@@ -26,7 +44,7 @@
         app:layout_constraintBottom_toTopOf="@id/imageBtnBrush"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/drawingView">
+        app:layout_constraintTop_toBottomOf="@id/flDrawingViewContainer">
 
         <ImageButton
             android:layout_width="25dp"
