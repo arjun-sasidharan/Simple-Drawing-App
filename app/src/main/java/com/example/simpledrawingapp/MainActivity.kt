@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawingView: DrawingView
     private lateinit var mImageButtonCurrentPaint: ImageButton
 
-    val openGalleryLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
+    private val openGalleryLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK && result.data != null) {
@@ -34,46 +34,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    val requestPermission: ActivityResultLauncher<Array<String>> = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        permissions.entries.forEach {
-            val permissionName = it.key
-            val isGranted = it.value
+    private val requestPermission: ActivityResultLauncher<Array<String>> =
+        registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            permissions.entries.forEach {
+                val permissionName = it.key
+                val isGranted = it.value
 
-            if (isGranted) {
-                if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
-                    Toast.makeText(
-                        this,
-                        "Permission to read media images granted",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
-                    Toast.makeText(
-                        this,
-                        "Permission to read external storage  granted",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-                openImagePicker()
-            } else {
-                if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
-                    Toast.makeText(
-                        this,
-                        "Permission to read media images not given",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
-                    Toast.makeText(
-                        this,
-                        "Permission to read external storage not given",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (isGranted) {
+                    if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
+                        Toast.makeText(
+                            this,
+                            "Permission to read media images granted",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
+                        Toast.makeText(
+                            this,
+                            "Permission to read external storage  granted",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                    openImagePicker()
+                } else {
+                    if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
+                        Toast.makeText(
+                            this,
+                            "Permission to read media images not given",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
+                        Toast.makeText(
+                            this,
+                            "Permission to read external storage not given",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
-        }
 
-    }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +99,14 @@ class MainActivity : AppCompatActivity() {
             } else {
                 requestStoragePermissionForApiBelow33()
             }
+        }
+        
+        findViewById<ImageButton>(R.id.imageBtnUndo).setOnClickListener {
+            drawingView.undoDrawing()
+        }
+
+        findViewById<ImageButton>(R.id.imageBtnRedo).setOnClickListener {
+            drawingView.redoDrawing()
         }
     }
 

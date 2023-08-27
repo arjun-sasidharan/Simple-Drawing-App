@@ -169,6 +169,28 @@
             android:src="@drawable/ic_brush_24"
             app:tint="?colorSurface" />
 
+        <ImageButton
+            android:id="@+id/imageBtnRedo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="5dp"
+            android:background="@drawable/small"
+            android:backgroundTint="?colorPrimary"
+            android:contentDescription="Brush size"
+            android:src="@drawable/ic_redo_24"
+            app:tint="?colorSurface" />
+
+        <ImageButton
+            android:id="@+id/imageBtnUndo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_margin="5dp"
+            android:background="@drawable/small"
+            android:backgroundTint="?colorPrimary"
+            android:contentDescription="Brush size"
+            android:src="@drawable/ic_undo_24"
+            app:tint="?colorSurface" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
