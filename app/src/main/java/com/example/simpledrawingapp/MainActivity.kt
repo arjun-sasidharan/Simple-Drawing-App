@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.content.res.Resources.Theme
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -24,6 +27,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var drawingView: DrawingView
     private lateinit var mImageButtonCurrentPaint: ImageButton
+    private var currentBrushSize = 20.toFloat()
 
     private val openGalleryLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -100,7 +104,7 @@ class MainActivity : AppCompatActivity() {
                 requestStoragePermissionForApiBelow33()
             }
         }
-        
+
         findViewById<ImageButton>(R.id.imageBtnUndo).setOnClickListener {
             drawingView.undoDrawing()
         }
@@ -120,22 +124,53 @@ class MainActivity : AppCompatActivity() {
         brushDialog.setContentView(R.layout.dialog_brush_size)
         brushDialog.setTitle("Brush Size: ")
         val smallBtn = brushDialog.findViewById<ImageButton>(R.id.imageBtnSmallBrush)
+        val mediumBtn = brushDialog.findViewById<ImageButton>(R.id.imageBtnMediumBrush)
+        val largeBtn = brushDialog.findViewById<ImageButton>(R.id.imageBtnLargeBrush)
+
         smallBtn.setOnClickListener {
             drawingView.setSizeForBrush(10.toFloat())
+            currentBrushSize = 10.toFloat()
+            setupSelectedBrushBackground(smallBtn, mediumBtn, largeBtn)
             brushDialog.dismiss()
         }
-        val mediumBtn = brushDialog.findViewById<ImageButton>(R.id.imageBtnMediumBrush)
         mediumBtn.setOnClickListener {
             drawingView.setSizeForBrush(20.toFloat())
+            currentBrushSize = 20.toFloat()
+            setupSelectedBrushBackground(smallBtn, mediumBtn, largeBtn)
             brushDialog.dismiss()
         }
-        val largeBtn = brushDialog.findViewById<ImageButton>(R.id.imageBtnLargeBrush)
         largeBtn.setOnClickListener {
             drawingView.setSizeForBrush(30.toFloat())
+            currentBrushSize = 30.toFloat()
+            setupSelectedBrushBackground(smallBtn, mediumBtn, largeBtn)
             brushDialog.dismiss()
         }
-
+        setupSelectedBrushBackground(smallBtn, mediumBtn, largeBtn)
         brushDialog.show()
+    }
+
+    private fun setupSelectedBrushBackground(
+        smallBtn: ImageButton,
+        mediumBtn: ImageButton,
+        largeBtn: ImageButton
+    ) {
+        when (currentBrushSize) {
+            10f -> {
+                smallBtn.setColorFilter(androidx.appcompat.R.attr.colorAccent);
+                mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+                largeBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+            }
+            20f -> {
+                smallBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+                mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorAccent);
+                largeBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+            }
+            30f -> {
+                smallBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+                mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
+                largeBtn.setColorFilter(androidx.appcompat.R.attr.colorAccent);
+            }
+        }
     }
 
     fun paintColorClicked(view: View) {
