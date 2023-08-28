@@ -1,27 +1,29 @@
 package com.example.simpledrawingapp
 
-import android.Manifest
+import android.Manifest.permission
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.ContentValues
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.content.res.Resources.Theme
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.get
+import java.io.IOException
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mImageButtonCurrentPaint: ImageButton
     private var currentBrushSize = 20.toFloat()
 
+    // Callback when user selected a photo from gallery
     private val openGalleryLauncher: ActivityResultLauncher<Intent> = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -38,42 +41,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val requestPermission: ActivityResultLauncher<Array<String>> =
+    private val permissionLauncher: ActivityResultLauncher<Array<String>> =
         registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             permissions.entries.forEach {
                 val permissionName = it.key
                 val isGranted = it.value
-
-                if (isGranted) {
-                    if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
-                        Toast.makeText(
-                            this,
-                            "Permission to read media images granted",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
-                        Toast.makeText(
-                            this,
-                            "Permission to read external storage  granted",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                if (permissionName == permission.WRITE_EXTERNAL_STORAGE) {
+                    if (isGranted) {
+                        savePhoto()
                     }
+                } else if (isGranted) {
                     openImagePicker()
                 } else {
-                    if (permissionName == Manifest.permission.READ_MEDIA_IMAGES) {
-                        Toast.makeText(
-                            this,
-                            "Permission to read media images not given",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else if (permissionName == Manifest.permission.READ_EXTERNAL_STORAGE) {
-                        Toast.makeText(
-                            this,
-                            "Permission to read external storage not given",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    if (permissionName == permission.READ_MEDIA_IMAGES) {
+                        showToast("Permission to read media images not given")
+                    } else if (permissionName == permission.READ_EXTERNAL_STORAGE) {
+                        showToast("Permission to read external storage not given")
                     }
                 }
             }
@@ -98,11 +83,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<ImageButton>(R.id.imageBtnGallery).setOnClickListener {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requestStoragePermission()
-            } else {
-                requestStoragePermissionForApiBelow33()
-            }
+            requestStorageReadPermission()
         }
 
         findViewById<ImageButton>(R.id.imageBtnUndo).setOnClickListener {
@@ -112,6 +93,30 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.imageBtnRedo).setOnClickListener {
             drawingView.redoDrawing()
         }
+
+        findViewById<ImageButton>(R.id.imageBtnSave).setOnClickListener {
+            requestStorageWritePermission()
+        }
+    }
+
+
+    // region Picking an Image from external storage
+
+    private fun requestStorageReadPermission() {
+        val minSdk33 = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        val permission = if (minSdk33) permission.READ_MEDIA_IMAGES
+        else permission.READ_EXTERNAL_STORAGE
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+            showRationaleDialog(
+                "Kids Drawing App",
+                "Need access to external storage to import an image",
+                "Request"
+            ) {
+                permissionLauncher.launch(kotlin.arrayOf(permission))
+            }
+        } else {
+            permissionLauncher.launch(arrayOf(permission))
+        }
     }
 
     private fun openImagePicker() {
@@ -119,6 +124,87 @@ class MainActivity : AppCompatActivity() {
         openGalleryLauncher.launch(pickIntent)
     }
 
+    // endregion
+
+    // region Saving an Image to external storage
+
+    private fun requestStorageWritePermission() {
+        val maxSdk28 = Build.VERSION.SDK_INT <= Build.VERSION_CODES.P
+        if (maxSdk28) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    this,
+                    permission.WRITE_EXTERNAL_STORAGE
+                )
+            ) {
+                showRationaleDialog(
+                    "Kids Drawing App",
+                    "Need access to external storage to save the image",
+                    "Request"
+                ) {
+                    permissionLauncher.launch(kotlin.arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE))
+                }
+            } else {
+                permissionLauncher.launch(arrayOf(permission.WRITE_EXTERNAL_STORAGE))
+            }
+        } else {
+            // No permission required
+            savePhoto()
+        }
+    }
+
+    private fun savePhoto() {
+        val flDrawingView: FrameLayout = findViewById(R.id.flDrawingViewContainer)
+        val saved = savePhotoToExternalStorage(
+            "Simple_Drawing_${System.currentTimeMillis() / 1000}",
+            getBitmapFromView(flDrawingView)
+        )
+        showToast(if (saved) "Drawing saved" else "Something went wrong")
+    }
+
+
+    private fun getBitmapFromView(view: View): Bitmap {
+        val returnedBitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(returnedBitmap)
+        val bgDrawable = view.background
+        if (bgDrawable != null) {
+            bgDrawable.draw(canvas)
+        } else {
+            canvas.drawColor(Color.WHITE)
+        }
+
+        view.draw(canvas)
+        return returnedBitmap
+    }
+
+    private fun savePhotoToExternalStorage(displayName: String, bmp: Bitmap): Boolean {
+        val imageCollection = sdk29AndUp {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+
+        val contentValue = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.WIDTH, bmp.width)
+            put(MediaStore.Images.Media.HEIGHT, bmp.height)
+        }
+        return try {
+            contentResolver.insert(imageCollection, contentValue)?.also { uri ->
+                contentResolver.openOutputStream(uri).use { outputStream ->
+                    if (!bmp.compress(Bitmap.CompressFormat.PNG, 95, outputStream)) {
+                        throw IOException("Couldn't save bitmap")
+                    }
+                }
+            } ?: throw IOException("Couldn't create MediaStore entry")
+            true
+        } catch (e: IOException) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // endregion
+
+    // region Brush Setup
     private fun showBrushSizeChooserDialog() {
         val brushDialog = Dialog(this)
         brushDialog.setContentView(R.layout.dialog_brush_size)
@@ -160,11 +246,13 @@ class MainActivity : AppCompatActivity() {
                 mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
                 largeBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
             }
+
             20f -> {
                 smallBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
                 mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorAccent);
                 largeBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
             }
+
             30f -> {
                 smallBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
                 mediumBtn.setColorFilter(androidx.appcompat.R.attr.colorPrimary);
@@ -188,48 +276,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun requestStoragePermission() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.READ_MEDIA_IMAGES
-            )
-        ) {
-            showRationaleDialog(
-                "Kids Drawing App",
-                "Need access to external storage to import an image"
-            )
-        } else {
-            requestPermission.launch(
-                arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES
-                )
-            )
-        }
-    }
+    // endregion brush setup
 
-    private fun requestStoragePermissionForApiBelow33() {
-        if (ActivityCompat.shouldShowRequestPermissionRationale(
-                this,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        ) {
-            showRationaleDialog(
-                "Kids Drawing App",
-                "Need access to external storage to import an image"
-            )
-        } else {
-            requestPermission.launch(
-                arrayOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                )
-            )
-        }
-    }
 
     private fun showRationaleDialog(
         title: String,
-        message: String
+        message: String,
+        negativeBtn: String? = null,
+        negativeBtnOnClick: (() -> Unit)? = null
     ) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder.setTitle(title)
@@ -237,6 +291,12 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Cancel") { dialog, _ ->
                 dialog.dismiss()
             }
-        builder.create().show()
+        if (negativeBtn != null && negativeBtnOnClick != null) {
+            builder.setNegativeButton(negativeBtn) { dialog, _ ->
+                negativeBtnOnClick()
+                dialog.dismiss()
+            }
+            builder.create().show()
+        }
     }
 }
