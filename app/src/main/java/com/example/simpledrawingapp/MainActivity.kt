@@ -27,6 +27,7 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var customProgressDialog: Dialog
     private lateinit var drawingView: DrawingView
     private lateinit var mImageButtonCurrentPaint: ImageButton
     private var currentBrushSize = 20.toFloat()
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<ImageButton>(R.id.imageBtnSave).setOnClickListener {
+            showProgressDialog()
             requestStorageWritePermission()
         }
     }
@@ -158,6 +160,7 @@ class MainActivity : AppCompatActivity() {
             "Simple_Drawing_${System.currentTimeMillis() / 1000}",
             getBitmapFromView(flDrawingView)
         )
+        cancelProgressBar()
         showToast(if (saved) "Drawing saved" else "Something went wrong")
     }
 
@@ -297,6 +300,18 @@ class MainActivity : AppCompatActivity() {
                 dialog.dismiss()
             }
             builder.create().show()
+        }
+    }
+
+    private fun showProgressDialog() {
+        customProgressDialog = Dialog(this)
+        customProgressDialog.setContentView(R.layout.dialog_custom_progress)
+        customProgressDialog.show()
+    }
+
+    private fun cancelProgressBar() {
+        if (this::customProgressDialog.isInitialized) {
+            customProgressDialog.dismiss()
         }
     }
 }
