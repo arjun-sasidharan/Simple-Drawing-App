@@ -8,6 +8,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -156,12 +157,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun savePhoto() {
         val flDrawingView: FrameLayout = findViewById(R.id.flDrawingViewContainer)
-        val saved = savePhotoToExternalStorage(
+        val (saveStatus, imageUri) = savePhotoToExternalStorage(
             "Simple_Drawing_${System.currentTimeMillis() / 1000}",
             getBitmapFromView(flDrawingView)
         )
         cancelProgressBar()
-        showToast(if (saved) "Drawing saved" else "Something went wrong")
+        showToast(if (saveStatus) "Drawing saved" else "Something went wrong")
+        imageUri?.let { uri ->
+            showShareSheet(uri)
+        }
+    }
+
+    private fun showShareSheet(uri: Uri) {
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.putExtra(Intent.EXTRA_STREAM, uri)
+        intent.type = "image/png"
+        startActivity(Intent.createChooser(intent, "Share via"))
     }
 
 
@@ -179,11 +190,11 @@ class MainActivity : AppCompatActivity() {
         return returnedBitmap
     }
 
-    private fun savePhotoToExternalStorage(displayName: String, bmp: Bitmap): Boolean {
+    private fun savePhotoToExternalStorage(displayName: String, bmp: Bitmap): Pair<Boolean, Uri?> {
         val imageCollection = sdk29AndUp {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         } ?: MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-
+        var imageUri: Uri? = null
         val contentValue = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, "$displayName.png")
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
@@ -196,12 +207,13 @@ class MainActivity : AppCompatActivity() {
                     if (!bmp.compress(Bitmap.CompressFormat.PNG, 95, outputStream)) {
                         throw IOException("Couldn't save bitmap")
                     }
+                    imageUri = uri
                 }
             } ?: throw IOException("Couldn't create MediaStore entry")
-            true
+            true to imageUri
         } catch (e: IOException) {
             e.printStackTrace()
-            false
+            false to imageUri
         }
     }
 
